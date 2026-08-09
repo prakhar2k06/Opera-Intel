@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from property_type import PropertyType
-from sentinel import Sentinel
+from .property_type import PropertyType
+from .sentinel import Sentinel
 
 
 @dataclass(frozen=True)

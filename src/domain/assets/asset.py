@@ -1,11 +1,11 @@
-from asset_type import AssetType
-from exceptions import (
+from .asset_type import AssetType
+from .exceptions import (
     InvalidPropertyValueException,
     MissingPropertyException,
     UnknownPropertyException,
     UnpublishedAssetTypeException,
 )
-from sentinel import Sentinel
+from .sentinel import Sentinel
 
 
 class Asset:

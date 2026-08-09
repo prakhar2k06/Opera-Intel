@@ -1,5 +1,5 @@
-from exceptions import AssetTypeSchemaLockedException, DuplicatePropertyException
-from property import Property
+from .exceptions import AssetTypeSchemaLockedException, DuplicatePropertyException
+from .property import Property
 
 
 class AssetType:
