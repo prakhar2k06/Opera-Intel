@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from assets.asset_type import AssetType
-from exceptions import InvalidRelationshipTypeException
+from ..assets.asset_type import AssetType
+from .exceptions import InvalidRelationshipTypeException
 
 
 @dataclass(frozen=True)

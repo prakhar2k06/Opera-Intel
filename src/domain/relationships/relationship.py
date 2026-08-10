@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 
-from assets.asset import Asset
-from exceptions import (
+from ..assets.asset import Asset
+from .exceptions import (
     InvalidRelationshipAssetException,
     InvalidRelationshipTypeException,
     RelationshipTypeMismatchException,
 )
-
 from .relationship_type import RelationshipType
 
 
