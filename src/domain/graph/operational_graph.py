@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from ..assets.asset import Asset
 from ..relationships.relationship import Relationship
@@ -14,11 +14,11 @@ from .exceptions import (
 
 class OperationalGraph:
     def __init__(self) -> None:
-        self.assets: set = set()
-        self.relationships: set = set()
+        self.assets: set[Asset] = set()
+        self.relationships: set[Relationship] = set()
 
-        self.incoming: dict = defaultdict(list)
-        self.outgoing: dict = defaultdict(list)
+        self.incoming: dict[Asset, list[Relationship]] = defaultdict(list)
+        self.outgoing: dict[Asset, list[Relationship]] = defaultdict(list)
 
     def add_asset(self, asset: Asset) -> None:
         if not isinstance(asset, Asset):
@@ -51,26 +51,24 @@ class OperationalGraph:
             self.outgoing[relationship.target_asset].append(relationship)
             self.incoming[relationship.source_asset].append(relationship)
 
-    def get_assets(self) -> set:
+    def get_assets(self) -> set[Asset]:
         return set(self.assets)
 
-    def get_relationships(self) -> set:
+    def get_relationships(self) -> set[Relationship]:
         return set(self.relationships)
 
-    def get_outgoing(self, asset: Asset) -> list:
+    def get_outgoing(self, asset: Asset) -> list[Relationship]:
         self._validate_asset_in_graph(asset)
-
         return list(self.outgoing[asset])
 
-    def get_incoming(self, asset: Asset) -> list:
+    def get_incoming(self, asset: Asset) -> list[Relationship]:
         self._validate_asset_in_graph(asset)
-
         return list(self.incoming[asset])
 
-    def get_neighbors(self, asset: Asset) -> set:
+    def get_neighbors(self, asset: Asset) -> set[Asset]:
         self._validate_asset_in_graph(asset)
 
-        neighbors = set()
+        neighbors: set[Asset] = set()
 
         for relationship in self.outgoing[asset]:
             neighbors.add(self._get_other_asset(asset, relationship))
@@ -97,7 +95,7 @@ class OperationalGraph:
         self,
         asset: Asset,
         relationship_type: RelationshipType,
-    ) -> list:
+    ) -> list[Asset]:
         self._validate_asset_in_graph(asset)
 
         return [
@@ -105,6 +103,144 @@ class OperationalGraph:
             for relationship in self.incoming[asset]
             if relationship.relationship_type == relationship_type
         ]
+
+    def is_reachable(
+        self,
+        source: Asset,
+        target: Asset,
+        relationship_types: set[RelationshipType] | None = None,
+    ) -> bool:
+        self._validate_asset_in_graph(source)
+        self._validate_asset_in_graph(target)
+
+        q: deque[Asset] = deque([source])
+        visited: set[Asset] = {source}
+
+        while q:
+            node = q.popleft()
+
+            if node == target:
+                return True
+
+            for relationship in self.outgoing[node]:
+                if (
+                    relationship_types is not None
+                    and relationship.relationship_type not in relationship_types
+                ):
+                    continue
+
+                neighbor = self._get_other_asset(node, relationship)
+
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    q.append(neighbor)
+
+        return False
+
+    def get_downstream(
+        self,
+        source: Asset,
+        relationship_types: set[RelationshipType] | None = None,
+    ) -> set[Asset]:
+        self._validate_asset_in_graph(source)
+
+        q: deque[Asset] = deque([source])
+        visited: set[Asset] = {source}
+        downstream: set[Asset] = set()
+
+        while q:
+            node = q.popleft()
+
+            for relationship in self.outgoing[node]:
+                if (
+                    relationship_types is not None
+                    and relationship.relationship_type not in relationship_types
+                ):
+                    continue
+
+                neighbor = self._get_other_asset(node, relationship)
+
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    downstream.add(neighbor)
+                    q.append(neighbor)
+
+        return downstream
+
+    def get_upstream(
+        self,
+        source: Asset,
+        relationship_types: set[RelationshipType] | None = None,
+    ) -> set[Asset]:
+        self._validate_asset_in_graph(source)
+
+        q: deque[Asset] = deque([source])
+        visited: set[Asset] = {source}
+        upstream: set[Asset] = set()
+
+        while q:
+            node = q.popleft()
+
+            for relationship in self.incoming[node]:
+                if (
+                    relationship_types is not None
+                    and relationship.relationship_type not in relationship_types
+                ):
+                    continue
+
+                neighbor = self._get_other_asset(node, relationship)
+
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    upstream.add(neighbor)
+                    q.append(neighbor)
+
+        return upstream
+
+    def get_path(
+        self,
+        source: Asset,
+        target: Asset,
+        relationship_types: set[RelationshipType] | None = None,
+    ) -> list[Asset] | None:
+        self._validate_asset_in_graph(source)
+        self._validate_asset_in_graph(target)
+
+        q: deque[Asset] = deque([source])
+        visited: set[Asset] = {source}
+        parent: dict[Asset, Asset | None] = {source: None}
+
+        while q:
+            node = q.popleft()
+
+            if node == target:
+                break
+
+            for relationship in self.outgoing[node]:
+                if (
+                    relationship_types is not None
+                    and relationship.relationship_type not in relationship_types
+                ):
+                    continue
+
+                neighbor = self._get_other_asset(node, relationship)
+
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    parent[neighbor] = node
+                    q.append(neighbor)
+
+        if target not in visited:
+            return None
+
+        path: list[Asset] = []
+        current_node: Asset | None = target
+
+        while current_node is not None:
+            path.append(current_node)
+            current_node = parent[current_node]
+
+        return path[::-1]
 
     def _validate_asset_in_graph(self, asset: Asset) -> None:
         if not isinstance(asset, Asset):
@@ -114,7 +250,10 @@ class OperationalGraph:
             raise AssetNotInGraphException
 
     @staticmethod
-    def _get_other_asset(asset: Asset, relationship: Relationship) -> Asset:
+    def _get_other_asset(
+        asset: Asset,
+        relationship: Relationship,
+    ) -> Asset:
         if relationship.source_asset is asset:
             return relationship.target_asset
 
