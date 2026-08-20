@@ -579,3 +579,521 @@ def test_directed_relationship_is_not_indexed_in_reverse() -> None:
 
     assert relationship not in op_graph.get_outgoing(asset_2)
     assert relationship not in op_graph.get_incoming(asset_1)
+
+
+def test_is_reachable_returns_true_when_path_exists() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, b, c))
+
+    assert graph.is_reachable(a, c) is True
+
+
+def test_is_reachable_returns_false_when_path_does_not_exist() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert graph.is_reachable(a, c) is False
+
+
+def test_is_reachable_respects_direction() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+    graph.add_asset(b)
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert graph.is_reachable(a, b) is True
+    assert graph.is_reachable(b, a) is False
+
+
+def test_is_reachable_works_with_bidirectional_relationship() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+
+    relationship_type = RelationshipType(
+        "ConnectedTo",
+        asset_type,
+        asset_type,
+        is_bidirectional=True,
+    )
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+    graph.add_asset(b)
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert graph.is_reachable(a, b) is True
+    assert graph.is_reachable(b, a) is True
+
+
+def test_is_reachable_filters_relationship_types() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    contains = RelationshipType("Contains", asset_type, asset_type)
+    depends_on = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(contains, a, b))
+    graph.add_relationship(Relationship(depends_on, b, c))
+
+    assert graph.is_reachable(a, c) is True
+    assert graph.is_reachable(a, c, {contains}) is False
+    assert graph.is_reachable(a, c, {contains, depends_on}) is True
+
+
+def test_is_reachable_with_empty_relationship_type_set_returns_false() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+    graph.add_asset(b)
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert graph.is_reachable(a, b, set()) is False
+
+
+def test_is_reachable_to_self_returns_true() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+
+    assert graph.is_reachable(a, a) is True
+
+
+def test_get_downstream_returns_all_reachable_assets() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+    d = Asset("D", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c, d):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, a, c))
+    graph.add_relationship(Relationship(relationship_type, b, d))
+
+    assert graph.get_downstream(a) == {b, c, d}
+
+
+def test_get_downstream_does_not_include_source() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+    graph.add_asset(b)
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert a not in graph.get_downstream(a)
+
+
+def test_get_downstream_filters_relationship_types() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+    d = Asset("D", asset_type, {})
+
+    contains = RelationshipType("Contains", asset_type, asset_type)
+    depends_on = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c, d):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(contains, a, b))
+    graph.add_relationship(Relationship(contains, b, c))
+    graph.add_relationship(Relationship(depends_on, b, d))
+
+    assert graph.get_downstream(a, {contains}) == {b, c}
+    assert graph.get_downstream(a, {depends_on}) == set()
+    assert graph.get_downstream(a, {contains, depends_on}) == {b, c, d}
+
+
+def test_get_upstream_returns_all_reachable_assets() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+    d = Asset("D", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c, d):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, c))
+    graph.add_relationship(Relationship(relationship_type, b, c))
+    graph.add_relationship(Relationship(relationship_type, c, d))
+
+    assert graph.get_upstream(d) == {a, b, c}
+
+
+def test_get_upstream_does_not_include_source() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+    graph.add_asset(b)
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert b not in graph.get_upstream(b)
+
+
+def test_get_upstream_filters_relationship_types() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+    d = Asset("D", asset_type, {})
+
+    contains = RelationshipType("Contains", asset_type, asset_type)
+    depends_on = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c, d):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(contains, a, b))
+    graph.add_relationship(Relationship(contains, b, c))
+    graph.add_relationship(Relationship(depends_on, d, c))
+
+    assert graph.get_upstream(c, {contains}) == {a, b}
+    assert graph.get_upstream(c, {depends_on}) == {d}
+
+
+def test_get_path_returns_shortest_path() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+    d = Asset("D", asset_type, {})
+    e = Asset("E", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c, d, e):
+        graph.add_asset(asset)
+
+    # Short path: A -> B -> D
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, b, d))
+
+    # Longer path: A -> C -> E -> D
+    graph.add_relationship(Relationship(relationship_type, a, c))
+    graph.add_relationship(Relationship(relationship_type, c, e))
+    graph.add_relationship(Relationship(relationship_type, e, d))
+
+    assert graph.get_path(a, d) == [a, b, d]
+
+
+def test_get_path_returns_none_when_target_unreachable() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+
+    assert graph.get_path(a, c) is None
+
+
+def test_get_path_to_self_returns_source() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+
+    assert graph.get_path(a, a) == [a]
+
+
+def test_get_path_filters_relationship_types() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    contains = RelationshipType("Contains", asset_type, asset_type)
+    depends_on = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(contains, a, b))
+    graph.add_relationship(Relationship(depends_on, b, c))
+
+    assert graph.get_path(a, c) == [a, b, c]
+    assert graph.get_path(a, c, {contains}) is None
+    assert graph.get_path(a, c, {contains, depends_on}) == [a, b, c]
+
+
+def test_traversal_handles_cycle_without_infinite_loop() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, b, c))
+    graph.add_relationship(Relationship(relationship_type, c, a))
+
+    assert graph.get_downstream(a) == {b, c}
+    assert graph.get_upstream(a) == {b, c}
+    assert graph.is_reachable(a, c) is True
+
+
+def test_has_cycle_returns_false_for_acyclic_graph() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+    d = Asset("D", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c, d):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, a, c))
+    graph.add_relationship(Relationship(relationship_type, b, d))
+    graph.add_relationship(Relationship(relationship_type, c, d))
+
+    assert graph.has_cycle() is False
+
+
+def test_has_cycle_returns_true_for_directed_cycle() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, b, c))
+    graph.add_relationship(Relationship(relationship_type, c, a))
+
+    assert graph.has_cycle() is True
+
+
+def test_single_bidirectional_relationship_is_not_cycle() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+
+    connected_to = RelationshipType(
+        "ConnectedTo",
+        asset_type,
+        asset_type,
+        is_bidirectional=True,
+    )
+
+    graph = OperationalGraph()
+    graph.add_asset(a)
+    graph.add_asset(b)
+    graph.add_relationship(Relationship(connected_to, a, b))
+
+    assert graph.has_cycle() is False
+
+
+def test_has_cycle_detects_cycle_involving_bidirectional_relationship() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    connected_to = RelationshipType(
+        "ConnectedTo",
+        asset_type,
+        asset_type,
+        is_bidirectional=True,
+    )
+    depends_on = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(connected_to, a, b))
+    graph.add_relationship(Relationship(depends_on, b, c))
+    graph.add_relationship(Relationship(depends_on, c, a))
+
+    assert graph.has_cycle() is True
+
+
+def test_has_cycle_filters_relationship_types() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    contains = RelationshipType("Contains", asset_type, asset_type)
+    depends_on = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(contains, a, b))
+    graph.add_relationship(Relationship(depends_on, b, c))
+    graph.add_relationship(Relationship(depends_on, c, a))
+
+    assert graph.has_cycle() is True
+    assert graph.has_cycle({depends_on}) is False
+    assert graph.has_cycle({contains, depends_on}) is True
+
+
+def test_has_cycle_with_empty_relationship_type_set_returns_false() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    a = Asset("A", asset_type, {})
+    b = Asset("B", asset_type, {})
+    c = Asset("C", asset_type, {})
+
+    relationship_type = RelationshipType("DependsOn", asset_type, asset_type)
+
+    graph = OperationalGraph()
+
+    for asset in (a, b, c):
+        graph.add_asset(asset)
+
+    graph.add_relationship(Relationship(relationship_type, a, b))
+    graph.add_relationship(Relationship(relationship_type, b, c))
+    graph.add_relationship(Relationship(relationship_type, c, a))
+
+    assert graph.has_cycle(set()) is False
