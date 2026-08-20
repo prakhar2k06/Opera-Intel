@@ -117,7 +117,7 @@ class OperationalGraph:
         visited: set[Asset] = {source}
 
         while q:
-            node = q.popleft()
+            node: Asset = q.popleft()
 
             if node == target:
                 return True
@@ -129,7 +129,7 @@ class OperationalGraph:
                 ):
                     continue
 
-                neighbor = self._get_other_asset(node, relationship)
+                neighbor: Asset = self._get_other_asset(node, relationship)
 
                 if neighbor not in visited:
                     visited.add(neighbor)
@@ -149,7 +149,7 @@ class OperationalGraph:
         downstream: set[Asset] = set()
 
         while q:
-            node = q.popleft()
+            node: Asset = q.popleft()
 
             for relationship in self.outgoing[node]:
                 if (
@@ -158,7 +158,7 @@ class OperationalGraph:
                 ):
                     continue
 
-                neighbor = self._get_other_asset(node, relationship)
+                neighbor: Asset = self._get_other_asset(node, relationship)
 
                 if neighbor not in visited:
                     visited.add(neighbor)
@@ -179,7 +179,7 @@ class OperationalGraph:
         upstream: set[Asset] = set()
 
         while q:
-            node = q.popleft()
+            node: Asset = q.popleft()
 
             for relationship in self.incoming[node]:
                 if (
@@ -188,7 +188,7 @@ class OperationalGraph:
                 ):
                     continue
 
-                neighbor = self._get_other_asset(node, relationship)
+                neighbor: Asset = self._get_other_asset(node, relationship)
 
                 if neighbor not in visited:
                     visited.add(neighbor)
@@ -211,7 +211,7 @@ class OperationalGraph:
         parent: dict[Asset, Asset | None] = {source: None}
 
         while q:
-            node = q.popleft()
+            node: Asset = q.popleft()
 
             if node == target:
                 break
@@ -223,7 +223,7 @@ class OperationalGraph:
                 ):
                     continue
 
-                neighbor = self._get_other_asset(node, relationship)
+                neighbor: Asset = self._get_other_asset(node, relationship)
 
                 if neighbor not in visited:
                     visited.add(neighbor)
@@ -241,6 +241,67 @@ class OperationalGraph:
             current_node = parent[current_node]
 
         return path[::-1]
+
+    def has_cycle(
+        self,
+        relationship_types: set[RelationshipType] | None = None,
+    ) -> bool:
+        visited: set[Asset] = set()
+
+        for asset in self.assets:
+            if asset not in visited:
+                if self._dfs_cycle(
+                    asset,
+                    visited,
+                    set(),
+                    relationship_types,
+                    None,
+                ):
+                    return True
+
+        return False
+
+    def _dfs_cycle(
+        self,
+        asset: Asset,
+        visited: set[Asset],
+        active_path: set[Asset],
+        relationship_types: set[RelationshipType] | None,
+        parent_relationship: Relationship | None,
+    ) -> bool:
+        visited.add(asset)
+        active_path.add(asset)
+
+        for relationship in self.outgoing[asset]:
+            if (
+                relationship_types is not None
+                and relationship.relationship_type not in relationship_types
+            ):
+                continue
+
+            if (
+                relationship is parent_relationship
+                and relationship.relationship_type.is_bidirectional
+            ):
+                continue
+
+            neighbor: Asset = self._get_other_asset(asset, relationship)
+
+            if neighbor in active_path:
+                return True
+
+            if neighbor not in visited:
+                if self._dfs_cycle(
+                    neighbor,
+                    visited,
+                    active_path,
+                    relationship_types,
+                    relationship,
+                ):
+                    return True
+
+        active_path.remove(asset)
+        return False
 
     def _validate_asset_in_graph(self, asset: Asset) -> None:
         if not isinstance(asset, Asset):
