@@ -20,3 +20,27 @@ class AssetTypeSchemaLockedException(Exception):
 
 class UnpublishedAssetTypeException(Exception):
     pass
+
+
+class InvalidStateTransitionException(Exception):
+    pass
+
+
+class InvalidStateDefinitionException(Exception):
+    pass
+
+
+class DuplicateStateException(Exception):
+    pass
+
+
+class DuplicateTransitionException(Exception):
+    pass
+
+
+class StateNotInAssetTypeException(Exception):
+    pass
+
+
+class InitialStateNotSetException(Exception):
+    pass
