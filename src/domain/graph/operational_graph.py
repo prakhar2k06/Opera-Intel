@@ -246,10 +246,11 @@ class OperationalGraph:
         self,
         relationship_types: set[RelationshipType] | None = None,
     ) -> bool:
-        visited: set[Asset] = set()
+        visited: set[tuple[Asset, Relationship | None]] = set()
 
         for asset in self.assets:
-            if asset not in visited:
+            state: tuple[Asset, None] = (asset, None)
+            if state not in visited:
                 if self._dfs_cycle(
                     asset,
                     visited,
@@ -264,12 +265,13 @@ class OperationalGraph:
     def _dfs_cycle(
         self,
         asset: Asset,
-        visited: set[Asset],
+        visited: set[tuple[Asset, Relationship | None]],
         active_path: set[Asset],
         relationship_types: set[RelationshipType] | None,
         parent_relationship: Relationship | None,
     ) -> bool:
-        visited.add(asset)
+        state: tuple[Asset, Relationship | None] = (asset, parent_relationship)
+        visited.add(state)
         active_path.add(asset)
 
         for relationship in self.outgoing[asset]:
@@ -290,7 +292,7 @@ class OperationalGraph:
             if neighbor in active_path:
                 return True
 
-            if neighbor not in visited:
+            if (neighbor, relationship) not in visited:
                 if self._dfs_cycle(
                     neighbor,
                     visited,
