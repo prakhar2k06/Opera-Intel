@@ -52,11 +52,11 @@ class Asset:
         if not isinstance(target, State):
             raise InvalidTargetStateException
 
-        if target not in self.asset_type.states:
-            raise InvalidTargetStateException
-
         if self.current_state is None:
             raise InvalidAssetStateTransitionException
+
+        if target not in self.asset_type.states:
+            raise InvalidTargetStateException
 
         if not self.asset_type.can_transition(self.current_state, target):
             raise InvalidAssetStateTransitionException
