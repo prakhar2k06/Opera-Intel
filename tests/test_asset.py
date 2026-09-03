@@ -3,13 +3,17 @@ import pytest
 from src.domain.assets.asset import Asset
 from src.domain.assets.asset_type import AssetType
 from src.domain.assets.exceptions import (
+    InvalidAssetStateTransitionException,
     InvalidPropertyValueException,
+    InvalidTargetStateException,
     MissingPropertyException,
     UnknownPropertyException,
     UnpublishedAssetTypeException,
 )
 from src.domain.assets.property import Property
 from src.domain.assets.property_type import PropertyType
+from src.domain.assets.state import State
+from src.domain.assets.state_transition import StateTransition
 
 
 def test_cannot_create_asset_from_unpublished_type() -> None:
@@ -211,3 +215,147 @@ def test_assets_of_same_type_have_independent_values() -> None:
 
     assert asset_1.properties["Count"] == 10
     assert asset_2.properties["Count"] == 20
+
+
+def test_asset_current_state_is_initial_state() -> None:
+    asset_type = AssetType("Test")
+    online = State("ONLINE")
+
+    asset_type.add_state(online)
+    asset_type.set_initial_state(online)
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    assert asset.current_state == online
+
+
+def test_stateless_asset_current_state_is_none() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    assert asset.current_state is None
+
+
+def test_asset_can_transition() -> None:
+    asset_type = AssetType("Test")
+
+    online = State("ONLINE")
+    degraded = State("DEGRADED")
+
+    asset_type.add_state(online)
+    asset_type.add_state(degraded)
+    asset_type.set_initial_state(online)
+
+    asset_type.add_transition(StateTransition(online, degraded))
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    asset.transition(degraded)
+
+    assert asset.current_state == degraded
+
+
+def test_asset_can_perform_multiple_valid_transitions() -> None:
+    asset_type = AssetType("Test")
+
+    online = State("ONLINE")
+    degraded = State("DEGRADED")
+    offline = State("OFFLINE")
+
+    for state in (online, degraded, offline):
+        asset_type.add_state(state)
+
+    asset_type.set_initial_state(online)
+
+    asset_type.add_transition(StateTransition(online, degraded))
+    asset_type.add_transition(StateTransition(degraded, offline))
+
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    asset.transition(degraded)
+    asset.transition(offline)
+
+    assert asset.current_state == offline
+
+
+def test_asset_rejects_non_state_target() -> None:
+    asset_type = AssetType("Test")
+
+    online = State("ONLINE")
+
+    asset_type.add_state(online)
+    asset_type.set_initial_state(online)
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    with pytest.raises(InvalidTargetStateException):
+        asset.transition([])
+
+
+def test_asset_rejects_state_not_in_asset_type() -> None:
+    asset_type = AssetType("Test")
+
+    online = State("ONLINE")
+    degraded = State("DEGRADED")
+    external_state = State("READY")
+
+    asset_type.add_state(online)
+    asset_type.add_state(degraded)
+    asset_type.set_initial_state(online)
+
+    asset_type.add_transition(StateTransition(online, degraded))
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    with pytest.raises(InvalidTargetStateException):
+        asset.transition(external_state)
+
+
+def test_asset_rejects_undefined_transition() -> None:
+    asset_type = AssetType("Test")
+
+    online = State("ONLINE")
+    degraded = State("DEGRADED")
+    offline = State("OFFLINE")
+
+    for state in (online, degraded, offline):
+        asset_type.add_state(state)
+
+    asset_type.set_initial_state(online)
+    asset_type.add_transition(StateTransition(online, degraded))
+
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    with pytest.raises(InvalidAssetStateTransitionException):
+        asset.transition(offline)
+
+
+def test_asset_transition_respects_direction() -> None:
+    asset_type = AssetType("Test")
+
+    online = State("ONLINE")
+    degraded = State("DEGRADED")
+
+    asset_type.add_state(online)
+    asset_type.add_state(degraded)
+    asset_type.set_initial_state(online)
+
+    asset_type.add_transition(StateTransition(online, degraded))
+    asset_type.publish()
+
+    asset = Asset("Asset_1", asset_type, {})
+
+    asset.transition(degraded)
+
+    with pytest.raises(InvalidAssetStateTransitionException):
+        asset.transition(online)
