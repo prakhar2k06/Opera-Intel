@@ -1,11 +1,14 @@
 from .asset_type import AssetType
 from .exceptions import (
+    InvalidAssetStateTransitionException,
     InvalidPropertyValueException,
+    InvalidTargetStateException,
     MissingPropertyException,
     UnknownPropertyException,
     UnpublishedAssetTypeException,
 )
 from .sentinel import Sentinel
+from .state import State
 
 
 class Asset:
@@ -16,6 +19,7 @@ class Asset:
         self.name: str = name
         self.asset_type: AssetType = asset_type
         self.properties: dict = {}
+        self.current_state: State | None = asset_type.initial_state
 
         for property_name in properties:
             if property_name not in self.asset_type.properties:
@@ -44,4 +48,17 @@ class Asset:
             else:
                 self.properties[property_name] = None
 
-        self.asset_type.publish()
+    def transition(self, target: State) -> None:
+        if not isinstance(target, State):
+            raise InvalidTargetStateException
+
+        if target not in self.asset_type.states:
+            raise InvalidTargetStateException
+
+        if self.current_state is None:
+            raise InvalidAssetStateTransitionException
+
+        if not self.asset_type.can_transition(self.current_state, target):
+            raise InvalidAssetStateTransitionException
+
+        self.current_state = target

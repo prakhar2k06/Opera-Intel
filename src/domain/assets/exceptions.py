@@ -44,3 +44,11 @@ class StateNotInAssetTypeException(Exception):
 
 class InitialStateNotSetException(Exception):
     pass
+
+
+class InvalidAssetStateTransitionException(Exception):
+    pass
+
+
+class InvalidTargetStateException(Exception):
+    pass
