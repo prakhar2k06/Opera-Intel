@@ -1097,3 +1097,96 @@ def test_has_cycle_with_empty_relationship_type_set_returns_false() -> None:
     graph.add_relationship(Relationship(relationship_type, c, a))
 
     assert graph.has_cycle(set()) is False
+
+
+# -------------------------
+# Domain Events
+# -------------------------
+
+
+def test_adding_relationship_emits_event() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    asset_1 = Asset("Asset_1", asset_type, {})
+    asset_2 = Asset("Asset_2", asset_type, {})
+
+    relationship_type = RelationshipType(
+        "Contains",
+        asset_type,
+        asset_type,
+    )
+
+    relationship = Relationship(
+        relationship_type,
+        asset_1,
+        asset_2,
+    )
+
+    graph = OperationalGraph()
+    graph.add_asset(asset_1)
+    graph.add_asset(asset_2)
+
+    graph.add_relationship(relationship)
+
+    assert len(graph._domain_events) == 1
+    assert graph._domain_events[0].relationship is relationship
+
+
+def test_failed_relationship_addition_emits_no_event() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    asset_1 = Asset("Asset_1", asset_type, {})
+    asset_2 = Asset("Asset_2", asset_type, {})
+
+    relationship_type = RelationshipType(
+        "Contains",
+        asset_type,
+        asset_type,
+    )
+
+    relationship = Relationship(
+        relationship_type,
+        asset_1,
+        asset_2,
+    )
+
+    graph = OperationalGraph()
+    graph.add_asset(asset_1)
+
+    with pytest.raises(AssetNotInGraphException):
+        graph.add_relationship(relationship)
+
+    assert graph._domain_events == []
+
+
+def test_graph_pull_domain_events_returns_and_clears_events() -> None:
+    asset_type = AssetType("Test")
+    asset_type.publish()
+
+    asset_1 = Asset("Asset_1", asset_type, {})
+    asset_2 = Asset("Asset_2", asset_type, {})
+
+    relationship_type = RelationshipType(
+        "Contains",
+        asset_type,
+        asset_type,
+    )
+
+    relationship = Relationship(
+        relationship_type,
+        asset_1,
+        asset_2,
+    )
+
+    graph = OperationalGraph()
+    graph.add_asset(asset_1)
+    graph.add_asset(asset_2)
+    graph.add_relationship(relationship)
+
+    events: list = graph.pull_domain_events()
+
+    assert len(events) == 1
+    assert events[0].relationship is relationship
+    assert graph.pull_domain_events() == []
