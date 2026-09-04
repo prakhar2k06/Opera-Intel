@@ -1,6 +1,8 @@
 from collections import defaultdict, deque
 
 from ..assets.asset import Asset
+from ..events.domain_event import DomainEvent
+from ..events.relationship_added_event import RelationshipAddedEvent
 from ..relationships.relationship import Relationship
 from ..relationships.relationship_type import RelationshipType
 from .exceptions import (
@@ -16,6 +18,7 @@ class OperationalGraph:
     def __init__(self) -> None:
         self.assets: set[Asset] = set()
         self.relationships: set[Relationship] = set()
+        self._domain_events: list[DomainEvent] = []
 
         self.incoming: dict[Asset, list[Relationship]] = defaultdict(list)
         self.outgoing: dict[Asset, list[Relationship]] = defaultdict(list)
@@ -50,6 +53,8 @@ class OperationalGraph:
         if relationship.relationship_type.is_bidirectional:
             self.outgoing[relationship.target_asset].append(relationship)
             self.incoming[relationship.source_asset].append(relationship)
+
+        self._domain_events.append(RelationshipAddedEvent(relationship))
 
     def get_assets(self) -> set[Asset]:
         return set(self.assets)
@@ -321,3 +326,8 @@ class OperationalGraph:
             return relationship.target_asset
 
         return relationship.source_asset
+
+    def pull_domain_events(self) -> list:
+        events: list[DomainEvent] = list(self._domain_events)
+        self._domain_events.clear()
+        return events
