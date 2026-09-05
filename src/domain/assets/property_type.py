@@ -9,18 +9,20 @@ class PropertyType(Enum):
     BOOLEAN = auto()
     DATETIME = auto()
 
-    def validate(self, value) -> bool | None:
+    def validate(self, value) -> bool:
         if self == PropertyType.STRING:
             return type(value) is str
 
-        elif self == PropertyType.INTEGER:
+        if self == PropertyType.INTEGER:
             return type(value) is int
 
-        elif self == PropertyType.FLOAT:
+        if self == PropertyType.FLOAT:
             return type(value) is int or type(value) is float
 
-        elif self == PropertyType.BOOLEAN:
+        if self == PropertyType.BOOLEAN:
             return type(value) is bool
 
-        elif self == PropertyType.DATETIME:
+        if self == PropertyType.DATETIME:
             return type(value) is datetime
+
+        return False

@@ -1,11 +1,15 @@
+from ..rules.rule import Rule
 from .exceptions import (
     AssetTypeSchemaLockedException,
     DuplicatePropertyException,
+    DuplicateRuleException,
     DuplicateStateException,
     DuplicateTransitionException,
     InitialStateNotSetException,
+    InvalidRuleDefinitionException,
     InvalidStateDefinitionException,
     InvalidStateTransitionException,
+    PropertyNotInAssetTypeException,
     StateNotInAssetTypeException,
 )
 from .property import Property
@@ -19,6 +23,7 @@ class AssetType:
         self.properties: dict[str, Property] = {}
         self.states: set[State] = set()
         self.transitions: set[StateTransition] = set()
+        self.rules: set[Rule] = set()
         self.initial_state: State | None = None
         self.is_published: bool = False
 
@@ -82,6 +87,28 @@ class AssetType:
             raise StateNotInAssetTypeException
 
         return StateTransition(source, target) in self.transitions
+
+    def add_rule(self, rule: Rule) -> None:
+        if self.is_published:
+            raise AssetTypeSchemaLockedException
+
+        if not isinstance(rule, Rule):
+            raise InvalidRuleDefinitionException
+
+        for property in rule.condition.get_referenced_properties():
+            if property.name not in self.properties:
+                raise PropertyNotInAssetTypeException
+
+            if self.properties[property.name] != property:
+                raise PropertyNotInAssetTypeException
+
+        if rule.action.transition_to not in self.states:
+            raise StateNotInAssetTypeException
+
+        if rule in self.rules:
+            raise DuplicateRuleException
+
+        self.rules.add(rule)
 
     def publish(self) -> None:
         if self.states and self.initial_state is None:

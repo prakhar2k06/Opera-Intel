@@ -52,3 +52,15 @@ class InvalidAssetStateTransitionException(Exception):
 
 class InvalidTargetStateException(Exception):
     pass
+
+
+class InvalidRuleDefinitionException(Exception):
+    pass
+
+
+class PropertyNotInAssetTypeException(Exception):
+    pass
+
+
+class DuplicateRuleException(Exception):
+    pass
