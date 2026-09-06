@@ -1,12 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-from ...assets.asset import Asset
 from ...assets.property import Property
+
+if TYPE_CHECKING:
+    from ...assets.asset import Asset
 
 
 class Condition(ABC):
     @abstractmethod
-    def evaluate(self, asset: Asset) -> bool:
+    def evaluate(self, asset: "Asset") -> bool:
         pass
 
     @abstractmethod

@@ -1,9 +1,12 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from ...assets.asset import Asset
 from ...assets.property import Property
 from ..exceptions import InvalidConditionDefinitionException
 from .condition import Condition
+
+if TYPE_CHECKING:
+    from ...assets.asset import Asset
 
 
 @dataclass(frozen=True)
@@ -18,7 +21,7 @@ class AndCondition(Condition):
         if not isinstance(self.condition_2, Condition):
             raise InvalidConditionDefinitionException
 
-    def evaluate(self, asset: Asset) -> bool:
+    def evaluate(self, asset: "Asset") -> bool:
         return self.condition_1.evaluate(asset) and self.condition_2.evaluate(asset)
 
     def get_referenced_properties(self) -> set[Property]:

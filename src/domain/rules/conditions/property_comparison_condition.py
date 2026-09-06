@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from ...assets.asset import Asset
 from ...assets.property import Property
 from ..exceptions import InvalidConditionDefinitionException
 from .comparison import Comparison
 from .condition import Condition
+
+if TYPE_CHECKING:
+    from ...assets.asset import Asset
 
 
 @dataclass(frozen=True)
@@ -26,7 +29,7 @@ class PropertyComparisonCondition(Condition):
         if not self.property.property_type.validate(self.value):
             raise InvalidConditionDefinitionException
 
-    def evaluate(self, asset: Asset) -> bool:
+    def evaluate(self, asset: "Asset") -> bool:
         current_value = asset.properties[self.property.name]
 
         return self.comparison.evaluate(
