@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.dialects import JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -19,9 +19,10 @@ class AssetModel(Base):
     asset_type: Mapped["AssetTypeModel"] = relationship(foreign_keys=[asset_type_id])
     name: Mapped[str]
     current_state_id: Mapped[int | None] = mapped_column(
-        ForeignKey("states.id"), nullable=True
+        ForeignKey("states.id"),
+        nullable=True,
     )
     current_state: Mapped["StateModel | None"] = relationship(
-        foreign_keys=[current_state_id], nullable=True
+        foreign_keys=[current_state_id]
     )
     properties: Mapped[Any] = mapped_column(JSONB)

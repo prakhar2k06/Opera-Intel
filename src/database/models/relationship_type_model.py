@@ -12,11 +12,13 @@ if TYPE_CHECKING:
 class RelationshipTypeModel(Base):
     __tablename__ = "relationship_types"
 
-    __table_args__ = UniqueConstraint(
-        "name",
-        "source_asset_type_id",
-        "target_asset_type_id",
-        name="uq_relationship_type_name_source_target",
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "source_asset_type_id",
+            "target_asset_type_id",
+            name="uq_relationship_type_name_source_target",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
