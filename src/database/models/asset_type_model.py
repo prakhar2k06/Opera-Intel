@@ -17,12 +17,16 @@ class AssetTypeModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     is_published: Mapped[bool]
+    properties: Mapped[list["PropertyModel"]] = relationship(
+        back_populates="asset_type",
+    )
     initial_state_id: Mapped[int | None] = mapped_column(
         ForeignKey("states.id"),
         nullable=True,
     )
-    properties: Mapped[list["PropertyModel"]] = relationship(
-        back_populates="asset_type",
+    initial_state: Mapped["StateModel | None"] = relationship(
+        foreign_keys=[initial_state_id],
+        post_update=True,
     )
     states: Mapped[list["StateModel"]] = relationship(
         back_populates="asset_type",
@@ -30,10 +34,6 @@ class AssetTypeModel(Base):
     )
     transitions: Mapped[list["StateTransitionModel"]] = relationship(
         back_populates="asset_type",
-    )
-    initial_state: Mapped["StateModel | None"] = relationship(
-        foreign_keys=[initial_state_id],
-        post_update=True,
     )
 
     def __repr__(self) -> str:
