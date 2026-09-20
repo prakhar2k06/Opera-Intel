@@ -1,3 +1,5 @@
+from uuid import UUID, uuid4
+
 from ..rules.rule import Rule
 from .exceptions import (
     AssetTypeSchemaLockedException,
@@ -18,7 +20,8 @@ from .state_transition import StateTransition
 
 
 class AssetType:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, id: UUID | None = None) -> None:
+        self.id: UUID = id if id is not None else uuid4()
         self.name: str = name
         self.properties: dict[str, Property] = {}
         self.states: set[State] = set()
@@ -26,6 +29,14 @@ class AssetType:
         self.rules: set[Rule] = set()
         self.initial_state: State | None = None
         self.is_published: bool = False
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, AssetType):
+            return False
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
     def add_property(self, property: Property) -> None:
         if self.is_published:
@@ -107,6 +118,14 @@ class AssetType:
 
         if rule in self.rules:
             raise DuplicateRuleException
+
+        for existing_rule in self.rules:
+            if (
+                existing_rule.trigger == rule.trigger
+                and existing_rule.condition == rule.condition
+                and existing_rule.action == rule.action
+            ):
+                raise DuplicateRuleException
 
         self.rules.add(rule)
 

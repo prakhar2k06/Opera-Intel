@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,7 +23,7 @@ class PropertyModel(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    asset_type_id: Mapped[int] = mapped_column(ForeignKey("asset_types.id"))
+    asset_type_id: Mapped[UUID] = mapped_column(ForeignKey("asset_types.id"))
     asset_type: Mapped["AssetTypeModel"] = relationship(back_populates="properties")
     name: Mapped[str]
     property_type: Mapped[PropertyType]

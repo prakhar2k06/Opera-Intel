@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -21,13 +22,13 @@ class RelationshipTypeModel(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     name: Mapped[str]
-    source_asset_type_id: Mapped[int] = mapped_column(ForeignKey("asset_types.id"))
+    source_asset_type_id: Mapped[UUID] = mapped_column(ForeignKey("asset_types.id"))
     source_asset_type: Mapped["AssetTypeModel"] = relationship(
         foreign_keys=[source_asset_type_id]
     )
-    target_asset_type_id: Mapped[int] = mapped_column(ForeignKey("asset_types.id"))
+    target_asset_type_id: Mapped[UUID] = mapped_column(ForeignKey("asset_types.id"))
     target_asset_type: Mapped["AssetTypeModel"] = relationship(
         foreign_keys=[target_asset_type_id]
     )

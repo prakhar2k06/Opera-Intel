@@ -39,6 +39,15 @@ class OperationalGraph:
         if relationship in self.relationships:
             raise DuplicateRelationshipException
 
+        for existing_relationship in self.relationships:
+            if (
+                existing_relationship.relationship_type
+                == relationship.relationship_type
+                and existing_relationship.source_asset == relationship.source_asset
+                and existing_relationship.target_asset == relationship.target_asset
+            ):
+                raise DuplicateRelationshipException
+
         if (
             relationship.source_asset not in self.assets
             or relationship.target_asset not in self.assets

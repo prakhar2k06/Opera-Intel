@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,8 +15,8 @@ if TYPE_CHECKING:
 class AssetModel(Base):
     __tablename__ = "assets"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    asset_type_id: Mapped[int] = mapped_column(ForeignKey("asset_types.id"))
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    asset_type_id: Mapped[UUID] = mapped_column(ForeignKey("asset_types.id"))
     asset_type: Mapped["AssetTypeModel"] = relationship(foreign_keys=[asset_type_id])
     name: Mapped[str]
     current_state_id: Mapped[int | None] = mapped_column(

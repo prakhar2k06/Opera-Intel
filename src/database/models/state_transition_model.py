@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -23,7 +24,7 @@ class StateTransitionModel(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    asset_type_id: Mapped[int] = mapped_column(ForeignKey("asset_types.id"))
+    asset_type_id: Mapped[UUID] = mapped_column(ForeignKey("asset_types.id"))
     asset_type: Mapped["AssetTypeModel"] = relationship(back_populates="transitions")
     source_state_id: Mapped[int] = mapped_column(ForeignKey("states.id"))
     source_state: Mapped["StateModel"] = relationship(foreign_keys=[source_state_id])
