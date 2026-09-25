@@ -28,6 +28,7 @@ class PropertyModel(Base):
     name: Mapped[str]
     property_type: Mapped[PropertyType]
     required: Mapped[bool]
+    has_default: Mapped[bool]
     default_value: Mapped[Any] = mapped_column(
         JSON,
         nullable=True,
