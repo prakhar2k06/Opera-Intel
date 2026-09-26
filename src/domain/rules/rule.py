@@ -7,7 +7,7 @@ from .exceptions import InvalidRuleDefinitionException
 from .trigger import Trigger
 
 
-@dataclass(frozen=True, eq=True)
+@dataclass(frozen=True, eq=False)
 class Rule:
     trigger: Trigger
     condition: Condition
