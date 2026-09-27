@@ -29,11 +29,8 @@ class AssetTypeMapper:
             is_published=asset_type.is_published,
         )
 
-        property_models: dict = {}
-
-        for property_name, property in asset_type.properties.items():
+        for property in asset_type.properties.values():
             property_model: PropertyModel = self.property_mapper.to_model(property)
-            property_models[property_name] = property_model
             model.properties.append(property_model)
 
         state_models: dict = {}
@@ -77,35 +74,34 @@ class AssetTypeMapper:
 
         for property_model in asset_type_model.properties:
             property: Property = self.property_mapper.to_domain(property_model)
-            properties[property_model] = property
+            properties[property_model.name] = property
             asset_type.add_property(property)
 
         states: dict = {}
 
         for state_model in asset_type_model.states:
             state: State = self.state_mapper.to_domain(state_model)
-            states[state_model] = state
+            states[state_model.id] = state
             asset_type.add_state(state)
 
         if asset_type_model.initial_state is not None:
-            asset_type.initial_state = states[asset_type_model.initial_state]
-
-        transitions: dict = {}
+            asset_type.set_initial_state(states[asset_type_model.initial_state.id])
 
         for transition_model in asset_type_model.transitions:
             transition: StateTransition = self.state_transition_mapper.to_domain(
-                transition_model
+                transition_model,
+                states[transition_model.source_state.id],
+                states[transition_model.target_state.id],
             )
-            transitions[transition_model] = transition
             asset_type.add_transition(transition)
-
-        rules: dict = {}
 
         for rule_model in asset_type_model.rules:
             rule: Rule = self.rule_mapper.to_domain(
-                rule_model, states[rule_model.target_state], properties
+                rule_model, states[rule_model.target_state.id], properties
             )
-            rules[rule_model] = rule
             asset_type.add_rule(rule)
+
+        if asset_type_model.is_published:
+            asset_type.publish()
 
         return asset_type
