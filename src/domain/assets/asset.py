@@ -118,3 +118,27 @@ class Asset:
         events: list[DomainEvent] = list(self._domain_events)
         self._domain_events.clear()
         return events
+
+    @classmethod
+    def reconstruct_asset(
+        cls,
+        id: UUID,
+        asset_type: AssetType,
+        name: str,
+        properties: dict,
+        current_state: State | None,
+    ) -> "Asset":
+        asset = cls(
+            id=id,
+            asset_type=asset_type,
+            name=name,
+            properties=properties,
+        )
+
+        if current_state and current_state not in asset_type.states:
+            raise InvalidTargetStateException
+
+        asset.current_state = current_state
+        asset._domain_events = []
+
+        return asset
