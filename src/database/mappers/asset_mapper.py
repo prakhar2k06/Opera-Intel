@@ -36,3 +36,15 @@ class AssetMapper:
         )
 
         return asset
+
+    def update_model(
+        self,
+        asset: Asset,
+        asset_model: AssetModel,
+        current_state_model: StateModel | None,
+    ) -> AssetModel:
+        asset_model.name = asset.name
+        asset_model.properties = dict(asset.properties)
+        asset_model.current_state = current_state_model
+
+        return asset_model
