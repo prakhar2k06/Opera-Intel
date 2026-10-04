@@ -4,3 +4,11 @@ class AssetTypeNotFoundException(Exception):
 
 class AssetNotFoundException(Exception):
     pass
+
+
+class RelationshipTypeNotFoundException(Exception):
+    pass
+
+
+class RelationshipNotFoundException(Exception):
+    pass
