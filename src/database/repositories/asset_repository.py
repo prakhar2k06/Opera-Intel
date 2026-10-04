@@ -9,8 +9,8 @@ from src.domain.assets.state import State
 from ...domain.assets.asset import Asset
 from ...domain.assets.asset_type import AssetType
 from ..mappers.asset_mapper import AssetMapper
-from ..mappers.asset_type_mapper import AssetTypeMapper
 from ..models.asset_model import AssetModel
+from .asset_type_repository import AssetTypeRepository
 from .exceptions import AssetNotFoundException, AssetTypeNotFoundException
 
 
@@ -18,7 +18,7 @@ class AssetRepository:
     def __init__(self, session: Session) -> None:
         self.session: Session = session
         self.asset_mapper = AssetMapper()
-        self.asset_type_mapper = AssetTypeMapper()
+        self.asset_type_repository = AssetTypeRepository(session)
 
     def save(self, asset: Asset) -> None:
         asset_type_model: AssetTypeModel | None = self.session.get(
@@ -37,6 +37,9 @@ class AssetRepository:
                     current_state_model = state_model
                     break
 
+            if not current_state_model:
+                raise ValueError("Asset has no matching current state")
+
         asset_model: AssetModel | None = self.session.get(
             AssetModel,
             asset.id,
@@ -52,6 +55,9 @@ class AssetRepository:
             self.session.add(asset_model)
 
         else:
+            if asset_model.asset_type_id != asset.asset_type.id:
+                raise ValueError("Existing Asset AssetType does not match")
+
             self.asset_mapper.update_model(
                 asset,
                 asset_model,
@@ -64,14 +70,9 @@ class AssetRepository:
         if not asset_model:
             raise AssetNotFoundException
 
-        asset_type_model: AssetTypeModel | None = self.session.get(
-            AssetTypeModel, asset_model.asset_type_id
+        asset_type: AssetType = self.asset_type_repository.get_by_id(
+            asset_model.asset_type_id
         )
-
-        if not asset_type_model:
-            raise AssetTypeNotFoundException
-
-        asset_type: AssetType = self.asset_type_mapper.to_domain(asset_type_model)
 
         current_state = None
         if asset_model.current_state:
