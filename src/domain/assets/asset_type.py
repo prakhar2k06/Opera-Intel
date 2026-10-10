@@ -134,3 +134,10 @@ class AssetType:
             raise InitialStateNotSetException
 
         self.is_published = True
+
+    def get_state_by_name(self, state_name: str) -> State:
+        for state in self.states:
+            if state.name == state_name:
+                return state
+
+        raise StateNotInAssetTypeException
