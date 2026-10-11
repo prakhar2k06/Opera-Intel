@@ -7,13 +7,15 @@ from ...database.repositories.asset_type_repository import AssetTypeRepository
 from ...domain.assets.asset import Asset
 from ...domain.assets.asset_type import AssetType
 from ...domain.assets.state import State
+from ..events.domain_event_processor import DomainEventProcessor
 
 
 class AssetService:
     def __init__(self, session: Session) -> None:
         self.session: Session = session
-        self.asset_repository = AssetRepository(session)
-        self.asset_type_repository = AssetTypeRepository(session)
+        self.asset_repository: AssetRepository = AssetRepository(session)
+        self.asset_type_repository: AssetTypeRepository = AssetTypeRepository(session)
+        self.event_processor: DomainEventProcessor = DomainEventProcessor()
 
     def create(self, name: str, asset_type_id: UUID, properties: dict) -> Asset:
         with self.session.begin():
@@ -30,6 +32,7 @@ class AssetService:
             asset: Asset = self.get_by_id(asset_id)
             state: State = asset.asset_type.get_state_by_name(state_name)
             asset.transition(state)
+            self.event_processor.process_events(asset)
             self.asset_repository.save(asset)
         return asset
 
@@ -37,6 +40,7 @@ class AssetService:
         with self.session.begin():
             asset: Asset = self.get_by_id(asset_id)
             asset.update_property(property_name, value)
+            self.event_processor.process_events(asset)
             self.asset_repository.save(asset)
         return asset
 
