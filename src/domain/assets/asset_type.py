@@ -26,7 +26,7 @@ class AssetType:
         self.properties: dict[str, Property] = {}
         self.states: set[State] = set()
         self.transitions: set[StateTransition] = set()
-        self.rules: set[Rule] = set()
+        self.rules: list[Rule] = []
         self.initial_state: State | None = None
         self.is_published: bool = False
 
@@ -127,11 +127,13 @@ class AssetType:
             ):
                 raise DuplicateRuleException
 
-        self.rules.add(rule)
+        self.rules.append(rule)
 
     def publish(self) -> None:
         if self.states and self.initial_state is None:
             raise InitialStateNotSetException
+
+        self.rules.sort(key=lambda x: (x.priority, x.id))
 
         self.is_published = True
 

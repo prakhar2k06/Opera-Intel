@@ -146,6 +146,7 @@ class RuleMapper:
 
         return RuleModel(
             id=rule.id,
+            priority=rule.priority,
             trigger=trigger_name,
             condition=self.rule_condition_to_json(rule.condition),
             target_state=target_state_model,
@@ -168,6 +169,7 @@ class RuleMapper:
 
         return Rule(
             id=rule_model.id,
+            priority=rule_model.priority,
             trigger=trigger,
             condition=condition,
             action=action,

@@ -238,7 +238,8 @@ class AssetTypeMapper:
                     )
 
                     if (
-                        existing_rule.trigger != mapped_rule.trigger
+                        existing_rule.priority != mapped_rule.priority
+                        or existing_rule.trigger != mapped_rule.trigger
                         or existing_rule.condition != mapped_rule.condition
                         or existing_rule.target_state.name != target_state_model.name
                     ):
@@ -357,7 +358,8 @@ class AssetTypeMapper:
                 )
 
                 if (
-                    existing_rule.trigger != mapped_rule.trigger
+                    existing_rule.priority != mapped_rule.priority
+                    or existing_rule.trigger != mapped_rule.trigger
                     or existing_rule.condition != mapped_rule.condition
                     or existing_rule.target_state.name != target_state_model.name
                 ):

@@ -16,6 +16,7 @@ class RuleModel(Base):
     __tablename__ = "rules"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    priority: Mapped[int]
     asset_type_id: Mapped[UUID] = mapped_column(ForeignKey("asset_types.id"))
     asset_type: Mapped["AssetTypeModel"] = relationship(
         back_populates="rules", foreign_keys=[asset_type_id]

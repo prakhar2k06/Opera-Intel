@@ -12,9 +12,13 @@ class Rule:
     trigger: Trigger
     condition: Condition
     action: Action
+    priority: int
     id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self) -> None:
+        if not isinstance(self.priority, int):
+            raise InvalidRuleDefinitionException
+
         if not isinstance(self.trigger, Trigger):
             raise InvalidRuleDefinitionException
 
