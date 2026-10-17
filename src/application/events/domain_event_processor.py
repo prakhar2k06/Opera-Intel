@@ -10,7 +10,7 @@ class DomainEventProcessor:
         self.rule_evaluator = RuleEvaluator()
 
     def process_events(self, asset: Asset) -> None:
-        domain_events: list[DomainEvent] | None = asset.pull_domain_events()
+        domain_events: list[DomainEvent] = asset.pull_domain_events()
 
         if not domain_events:
             return
@@ -21,7 +21,7 @@ class DomainEventProcessor:
             event: DomainEvent = queue.popleft()
             self.rule_evaluator.evaluate(event)
 
-            domain_events: list[DomainEvent] | None = asset.pull_domain_events()
+            domain_events: list[DomainEvent] = asset.pull_domain_events()
 
             if domain_events:
                 queue.extend(domain_events)
