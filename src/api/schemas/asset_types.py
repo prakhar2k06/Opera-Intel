@@ -6,7 +6,6 @@ from ...domain.assets.property_type import PropertyType
 
 
 class PropertyResponse(BaseModel):
-    name: str
     property_type: PropertyType
     required: bool
     has_default: bool
@@ -22,19 +21,19 @@ class TransitionResponse(BaseModel):
     target_state: StateResponse
 
 
-class RuleResponse(BaseModel):
-    pass
+# class RuleResponse(BaseModel):
+#     pass
 
 
 class AssetTypeResponse(BaseModel):
     id: UUID
     name: str
     is_published: bool
-    properties: list[PropertyResponse]
+    properties: dict[str, PropertyResponse]
     states: list[StateResponse]
     transitions: list[TransitionResponse]
     initial_state: StateResponse | None
-    rules: list[RuleResponse]
+    # rules: list[RuleResponse]
 
 
 class CreateAssetTypeRequest(BaseModel):
@@ -61,5 +60,5 @@ class AddTransitionRequest(BaseModel):
     target_state_name: str
 
 
-class AddRuleRequest(BaseModel):
-    pass
+# class AddRuleRequest(BaseModel):
+#     pass
