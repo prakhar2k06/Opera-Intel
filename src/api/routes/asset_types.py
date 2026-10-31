@@ -2,18 +2,20 @@ from uuid import UUID
 
 from fastapi import APIRouter
 
+from ...application.definitions.rule_definition import RuleDefinition
 from ...domain.assets.asset_type import AssetType
 from ...domain.assets.property import Property
 from ...domain.assets.state import State
 from ..dependencies import AssetTypeServiceDep
 from ..mappers.asset_types import (
     add_property_request_to_domain,
+    add_rule_request_to_definition,
     add_state_request_to_domain,
     asset_type_to_response,
 )
 from ..schemas.asset_types import (
     AddPropertyRequest,
-    # AddRuleRequest,
+    AddRuleRequest,
     AddStateRequest,
     AddTransitionRequest,
     AssetTypeResponse,
@@ -86,8 +88,15 @@ def add_transition(
     return asset_type_to_response(asset_type)
 
 
-# @router.post("/{asset_type_id}/rules")
-# async def add_rule(asset_type_id: UUID, request: AddRuleRequest, asset_type_service: AssetTypeServiceDep) -> AssetTypeResponse:
+@router.post("/{asset_type_id}/rules")
+def add_rule(
+    asset_type_id: UUID,
+    request: AddRuleRequest,
+    asset_type_service: AssetTypeServiceDep,
+) -> AssetTypeResponse:
+    rule_definition: RuleDefinition = add_rule_request_to_definition(request)
+    asset_type: AssetType = asset_type_service.add_rule(asset_type_id, rule_definition)
+    return asset_type_to_response(asset_type)
 
 
 @router.post("/{asset_type_id}/publish")

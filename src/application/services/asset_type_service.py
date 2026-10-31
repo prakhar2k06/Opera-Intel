@@ -2,12 +2,28 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from ...application.definitions.rule_definition import (
+    AndConditionDefinition,
+    ConditionDefinition,
+    OrConditionDefinition,
+    PropertyComparisonDefinition,
+    RuleDefinition,
+)
 from ...database.repositories.asset_type_repository import AssetTypeRepository
 from ...domain.assets.asset_type import AssetType
+from ...domain.assets.exceptions import PropertyNotInAssetTypeException
 from ...domain.assets.property import Property
 from ...domain.assets.state import State
 from ...domain.assets.state_transition import StateTransition
+from ...domain.rules.action import Action
+from ...domain.rules.conditions.and_condition import AndCondition
+from ...domain.rules.conditions.condition import Condition
+from ...domain.rules.conditions.or_condition import OrCondition
+from ...domain.rules.conditions.property_comparison_condition import (
+    PropertyComparisonCondition,
+)
 from ...domain.rules.rule import Rule
+from ...domain.rules.trigger import Trigger
 
 
 class AssetTypeService:
@@ -58,9 +74,61 @@ class AssetTypeService:
             self.repository.save(asset_type)
         return asset_type
 
-    def add_rule(self, asset_type_id: UUID, rule: Rule) -> AssetType:
+    def _build_condition(
+        self, asset_type: AssetType, definition: ConditionDefinition
+    ) -> Condition:
+        if isinstance(definition, PropertyComparisonDefinition):
+            property: Property | None = asset_type.properties.get(
+                definition.property_name
+            )
+
+            if property is None:
+                raise PropertyNotInAssetTypeException
+
+            return PropertyComparisonCondition(
+                property=property,
+                comparison=definition.comparison,
+                value=definition.value,
+            )
+
+        elif isinstance(definition, AndConditionDefinition):
+            return AndCondition(
+                condition_1=self._build_condition(asset_type, definition.left),
+                condition_2=self._build_condition(asset_type, definition.right),
+            )
+
+        elif isinstance(definition, OrConditionDefinition):
+            return OrCondition(
+                condition_1=self._build_condition(asset_type, definition.left),
+                condition_2=self._build_condition(asset_type, definition.right),
+            )
+
+        raise ValueError(f"Unsupported Condition definition -> {type(definition)}")
+
+    def _build_rule(
+        self, asset_type: AssetType, rule_definition: RuleDefinition
+    ) -> Rule:
+        trigger: Trigger = Trigger(rule_definition.trigger)
+        state: State = asset_type.get_state_by_name(rule_definition.target_state_name)
+        action = Action(state)
+        condition: Condition = self._build_condition(
+            asset_type,
+            rule_definition.condition,
+        )
+
+        return Rule(
+            trigger=trigger,
+            condition=condition,
+            action=action,
+            priority=rule_definition.priority,
+        )
+
+    def add_rule(
+        self, asset_type_id: UUID, rule_definition: RuleDefinition
+    ) -> AssetType:
         with self.session.begin():
             asset_type: AssetType = self.get_by_id(asset_type_id)
+            rule: Rule = self._build_rule(asset_type, rule_definition)
             asset_type.add_rule(rule)
             self.repository.save(asset_type)
         return asset_type
