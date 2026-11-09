@@ -6,6 +6,7 @@ from .exceptions import (
     InvalidRelationshipAssetException,
     InvalidRelationshipTypeException,
     RelationshipTypeMismatchException,
+    SelfRelationshipException,
 )
 from .relationship_type import RelationshipType
 
@@ -30,6 +31,9 @@ class Relationship:
             self.target_asset.asset_type != self.relationship_type.target_type
         ):
             raise RelationshipTypeMismatchException
+
+        if self.source_asset == self.target_asset:
+            raise SelfRelationshipException
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Relationship):

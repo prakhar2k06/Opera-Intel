@@ -352,7 +352,7 @@ def register_relationship_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "code": "invalid_relationship_type",
-                "message": "The provided RelationshipType is invalid..",
+                "message": "The provided RelationshipType is invalid.",
             },
         )
 
@@ -365,6 +365,18 @@ def register_relationship_exception_handlers(app: FastAPI) -> None:
             content={
                 "code": "invalid_relationship_asset",
                 "message": "The provided Asset is invalid for this Relationship.",
+            },
+        )
+
+    @app.exception_handler(relationship_exc.SelfRelationshipException)
+    def self_relationship_expection_handler(
+        request: Request, exc: relationship_exc.InvalidRelationshipAssetException
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "code": "self_relationship",
+                "message": "The source and target cannot be the same.",
             },
         )
 

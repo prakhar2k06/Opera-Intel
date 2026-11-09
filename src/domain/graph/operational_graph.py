@@ -43,10 +43,16 @@ class OperationalGraph:
             if (
                 existing_relationship.relationship_type
                 == relationship.relationship_type
-                and existing_relationship.source_asset == relationship.source_asset
-                and existing_relationship.target_asset == relationship.target_asset
             ):
-                raise DuplicateRelationshipException
+                if (
+                    existing_relationship.source_asset == relationship.source_asset
+                    and existing_relationship.target_asset == relationship.target_asset
+                ) or (
+                    relationship.relationship_type.is_bidirectional
+                    and existing_relationship.source_asset == relationship.target_asset
+                    and existing_relationship.target_asset == relationship.source_asset
+                ):
+                    raise DuplicateRelationshipException
 
         if (
             relationship.source_asset not in self.assets
@@ -155,29 +161,37 @@ class OperationalGraph:
         self,
         source: Asset,
         relationship_types: set[RelationshipType] | None = None,
-    ) -> set[Asset]:
+        max_depth: int | None = None,
+    ) -> set[tuple[Asset, int]]:
         self._validate_asset_in_graph(source)
 
-        q: deque[Asset] = deque([source])
+        if max_depth and max_depth < 0:
+            raise ValueError
+
+        q: deque[tuple[Asset, int]] = deque()
+        q.append((source, 0))
         visited: set[Asset] = {source}
-        downstream: set[Asset] = set()
+        downstream: set[tuple[Asset, int]] = set()
 
         while q:
-            node: Asset = q.popleft()
+            node: Asset
+            depth: int
+            node, depth = q.popleft()
 
-            for relationship in self.outgoing[node]:
-                if (
-                    relationship_types is not None
-                    and relationship.relationship_type not in relationship_types
-                ):
-                    continue
+            if max_depth is None or depth < max_depth:
+                for relationship in self.outgoing[node]:
+                    if (
+                        relationship_types is not None
+                        and relationship.relationship_type not in relationship_types
+                    ):
+                        continue
 
-                neighbor: Asset = self._get_other_asset(node, relationship)
+                    neighbor: Asset = self._get_other_asset(node, relationship)
 
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    downstream.add(neighbor)
-                    q.append(neighbor)
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        downstream.add((neighbor, depth + 1))
+                        q.append((neighbor, depth + 1))
 
         return downstream
 
@@ -185,29 +199,37 @@ class OperationalGraph:
         self,
         source: Asset,
         relationship_types: set[RelationshipType] | None = None,
-    ) -> set[Asset]:
+        max_depth: int | None = None,
+    ) -> set[tuple[Asset, int]]:
         self._validate_asset_in_graph(source)
 
-        q: deque[Asset] = deque([source])
+        if max_depth and max_depth < 0:
+            raise ValueError
+
+        q: deque[tuple[Asset, int]] = deque()
+        q.append((source, 0))
         visited: set[Asset] = {source}
-        upstream: set[Asset] = set()
+        upstream: set[tuple[Asset, int]] = set()
 
         while q:
-            node: Asset = q.popleft()
+            node: Asset
+            depth: int
+            node, depth = q.popleft()
 
-            for relationship in self.incoming[node]:
-                if (
-                    relationship_types is not None
-                    and relationship.relationship_type not in relationship_types
-                ):
-                    continue
+            if max_depth is None or depth < max_depth:
+                for relationship in self.incoming[node]:
+                    if (
+                        relationship_types is not None
+                        and relationship.relationship_type not in relationship_types
+                    ):
+                        continue
 
-                neighbor: Asset = self._get_other_asset(node, relationship)
+                    neighbor: Asset = self._get_other_asset(node, relationship)
 
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    upstream.add(neighbor)
-                    q.append(neighbor)
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        upstream.add((neighbor, depth + 1))
+                        q.append((neighbor, depth + 1))
 
         return upstream
 
@@ -331,7 +353,7 @@ class OperationalGraph:
         asset: Asset,
         relationship: Relationship,
     ) -> Asset:
-        if relationship.source_asset is asset:
+        if relationship.source_asset == asset:
             return relationship.target_asset
 
         return relationship.source_asset

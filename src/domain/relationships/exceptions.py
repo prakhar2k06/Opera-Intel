@@ -8,3 +8,7 @@ class InvalidRelationshipTypeException(Exception):
 
 class InvalidRelationshipAssetException(Exception):
     pass
+
+
+class SelfRelationshipException(Exception):
+    pass
