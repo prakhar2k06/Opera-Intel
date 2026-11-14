@@ -33,32 +33,7 @@ class OperationalGraph:
         self.assets.add(asset)
 
     def add_relationship(self, relationship: Relationship) -> None:
-        if not isinstance(relationship, Relationship):
-            raise InvalidGraphRelationshipException
-
-        if relationship in self.relationships:
-            raise DuplicateRelationshipException
-
-        for existing_relationship in self.relationships:
-            if (
-                existing_relationship.relationship_type
-                == relationship.relationship_type
-            ):
-                if (
-                    existing_relationship.source_asset == relationship.source_asset
-                    and existing_relationship.target_asset == relationship.target_asset
-                ) or (
-                    relationship.relationship_type.is_bidirectional
-                    and existing_relationship.source_asset == relationship.target_asset
-                    and existing_relationship.target_asset == relationship.source_asset
-                ):
-                    raise DuplicateRelationshipException
-
-        if (
-            relationship.source_asset not in self.assets
-            or relationship.target_asset not in self.assets
-        ):
-            raise AssetNotInGraphException
+        self._validate_relationship(relationship)
 
         self.relationships.add(relationship)
 
@@ -348,6 +323,34 @@ class OperationalGraph:
         if asset not in self.assets:
             raise AssetNotInGraphException
 
+    def _validate_relationship(self, relationship: Relationship) -> None:
+        if not isinstance(relationship, Relationship):
+            raise InvalidGraphRelationshipException
+
+        if relationship in self.relationships:
+            raise DuplicateRelationshipException
+
+        for existing_relationship in self.relationships:
+            if (
+                existing_relationship.relationship_type
+                == relationship.relationship_type
+            ):
+                if (
+                    existing_relationship.source_asset == relationship.source_asset
+                    and existing_relationship.target_asset == relationship.target_asset
+                ) or (
+                    relationship.relationship_type.is_bidirectional
+                    and existing_relationship.source_asset == relationship.target_asset
+                    and existing_relationship.target_asset == relationship.source_asset
+                ):
+                    raise DuplicateRelationshipException
+
+        if (
+            relationship.source_asset not in self.assets
+            or relationship.target_asset not in self.assets
+        ):
+            raise AssetNotInGraphException
+
     @staticmethod
     def _get_other_asset(
         asset: Asset,
@@ -362,3 +365,26 @@ class OperationalGraph:
         events: list[DomainEvent] = list(self._domain_events)
         self._domain_events.clear()
         return events
+
+    @classmethod
+    def reconstruct_graph(
+        cls, assets: list[Asset], relationships: list[Relationship]
+    ) -> "OperationalGraph":
+        graph = cls()
+
+        for asset in assets:
+            graph.add_asset(asset)
+
+        for relationship in relationships:
+            graph._validate_relationship(relationship)
+
+            graph.relationships.add(relationship)
+
+            graph.outgoing[relationship.source_asset].append(relationship)
+            graph.incoming[relationship.target_asset].append(relationship)
+
+            if relationship.relationship_type.is_bidirectional:
+                graph.outgoing[relationship.target_asset].append(relationship)
+                graph.incoming[relationship.source_asset].append(relationship)
+
+        return graph
