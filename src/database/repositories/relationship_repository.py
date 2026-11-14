@@ -1,5 +1,7 @@
+from typing import Sequence
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.domain.assets.asset import Asset
@@ -107,6 +109,36 @@ class RelationshipRepository:
         return self.relationship_mapper.to_domain(
             relationship_model, relationship_type, source_asset, target_asset
         )
+
+    def get_all(self) -> list[Relationship]:
+        relationship_models: Sequence[RelationshipModel] = self.session.scalars(
+            select(RelationshipModel)
+        ).all()
+
+        relationships: list = []
+
+        for relationship_model in relationship_models:
+            relationship_type: RelationshipType = (
+                self.relationship_type_repository.get_by_id(
+                    relationship_model.relationship_type_id
+                )
+            )
+
+            source_asset: Asset = self.asset_repository.get_by_id(
+                relationship_model.source_asset_id
+            )
+
+            target_asset: Asset = self.asset_repository.get_by_id(
+                relationship_model.target_asset_id
+            )
+
+            relationship: Relationship = self.relationship_mapper.to_domain(
+                relationship_model, relationship_type, source_asset, target_asset
+            )
+
+            relationships.append(relationship)
+
+        return relationships
 
     def delete(self, relationship: Relationship) -> None:
         relationship_model: RelationshipModel | None = self.session.get(

@@ -1,5 +1,7 @@
+from typing import Sequence
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.database.models.asset_type_model import AssetTypeModel
@@ -85,6 +87,32 @@ class AssetRepository:
             asset_model, asset_type, current_state
         )
         return asset
+
+    def get_all(self) -> list[Asset]:
+        asset_models: Sequence[AssetModel] = self.session.scalars(
+            select(AssetModel)
+        ).all()
+
+        assets: list[Asset] = []
+
+        for asset_model in asset_models:
+            asset_type: AssetType = self.asset_type_repository.get_by_id(
+                asset_model.asset_type_id
+            )
+
+            current_state = None
+            if asset_model.current_state:
+                for state in asset_type.states:
+                    if state.name == asset_model.current_state.name:
+                        current_state: State = state
+                        break
+
+            asset: Asset = self.asset_mapper.to_domain(
+                asset_model, asset_type, current_state
+            )
+            assets.append(asset)
+
+        return assets
 
     def delete(self, asset: Asset) -> None:
         asset_model: AssetModel | None = self.session.get(AssetModel, asset.id)
